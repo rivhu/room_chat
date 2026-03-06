@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ChatRooms{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/chat/css/style.css">
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">💬 ChatRooms</div>
+                <div class="user-badge">
+                    <div class="avatar">{{ user.username|first|upper }}</div>
+                    <span class="username-text">{{ user.username }}</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Rooms</div>
+                    <a href="{% url 'create_room' %}" class="btn-create">+ New Room</a>
+                    {% for room in rooms %}
+                    <a href="{% url 'room' room.name %}" class="nav-item {% if request.resolver_match.kwargs.room_name == room.name %}active{% endif %}">
+                        <span class="room-hash">#</span> {{ room.name }}
+                    </a>
+                    {% empty %}
+                    <p class="empty-hint">No rooms yet</p>
+                    {% endfor %}
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Direct Messages</div>
+                    {% for u in users %}
+                    <a href="{% url 'private_chat' u.username %}" class="nav-item dm-item {% if request.resolver_match.kwargs.username == u.username %}active{% endif %}">
+                        <div class="dm-avatar">{{ u.username|first|upper }}</div>
+                        {{ u.username }}
+                    </a>
+                    {% empty %}
+                    <p class="empty-hint">No other users</p>
+                    {% endfor %}
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="{% url 'logout' %}" class="logout-btn">⏻ Logout</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% if messages %}
+            <div class="flash-messages">
+                {% for msg in messages %}
+                <div class="flash flash-{{ msg.tags }}">{{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    <div class="auth-wrapper">
+        {% block auth_content %}{% endblock %}
+    </div>
+    {% endif %}
+    <script src="/static/chat/js/main.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

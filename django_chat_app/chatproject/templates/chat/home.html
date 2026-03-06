@@ -1,0 +1,62 @@
+{% extends 'chat/base.html' %}
+{% block title %}Home — ChatRooms{% endblock %}
+
+{% block content %}
+<div class="home-page">
+    <div class="home-header">
+        <h1>Welcome back, <span class="highlight">{{ user.username }}</span> 👋</h1>
+        <p>Jump into a room or start a private conversation.</p>
+    </div>
+
+    <div class="home-grid">
+        <!-- Rooms Section -->
+        <section class="card">
+            <div class="card-header">
+                <h2># Chat Rooms</h2>
+                <a href="{% url 'create_room' %}" class="btn btn-primary">+ Create Room</a>
+            </div>
+            <div class="room-list">
+                {% for room in rooms %}
+                <a href="{% url 'room' room.name %}" class="room-card">
+                    <div class="room-icon">#</div>
+                    <div class="room-info">
+                        <div class="room-name">{{ room.name }}</div>
+                        <div class="room-desc">{{ room.description|default:"No description"|truncatechars:60 }}</div>
+                    </div>
+                    <div class="room-meta">
+                        <span class="member-count">{{ room.members.count }} members</span>
+                    </div>
+                </a>
+                {% empty %}
+                <div class="empty-state">
+                    <p>No rooms yet. <a href="{% url 'create_room' %}">Create the first one!</a></p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section class="card">
+            <div class="card-header">
+                <h2>👥 Users</h2>
+            </div>
+            <div class="user-list">
+                {% for u in users %}
+                <a href="{% url 'private_chat' u.username %}" class="user-card">
+                    <div class="user-avatar">{{ u.username|first|upper }}</div>
+                    <div class="user-info">
+                        <div class="user-name">{{ u.username }}</div>
+                        <div class="user-sub">Click to message</div>
+                    </div>
+                    <span class="online-dot"></span>
+                </a>
+                {% empty %}
+                <div class="empty-state">
+                    <p>No other users yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

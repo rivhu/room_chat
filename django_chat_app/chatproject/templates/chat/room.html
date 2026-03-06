@@ -1,0 +1,98 @@
+{% extends 'chat/base.html' %}
+{% block title %}#{{ room.name }} — ChatRooms{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+    <div class="chat-header">
+        <div class="chat-title">
+            <span class="hash">#</span>{{ room.name }}
+            {% if user == room.created_by %}
+            <a href="{% url 'delete_room' room.name %}" class="btn-delete" onclick="return confirm('Delete this room?')">🗑</a>
+            {% endif %}
+        </div>
+        <div class="chat-desc">{{ room.description }}</div>
+    </div>
+
+    <div class="messages-container" id="messages">
+        {% for msg in messages %}
+        <div class="message {% if msg.author == user %}own{% endif %}">
+            <div class="msg-avatar">{{ msg.author.username|first|upper }}</div>
+            <div class="msg-body">
+                <div class="msg-meta">
+                    <span class="msg-author">{{ msg.author.username }}</span>
+                    <span class="msg-time">{{ msg.timestamp|time:"H:i" }}</span>
+                </div>
+                <div class="msg-content">{{ msg.content }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-chat">
+            <p>🎉 You're the first one here! Say hello.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="message-input-area">
+        <input type="text" id="message-input" class="message-input" placeholder="Message #{{ room.name }}..." autocomplete="off">
+        <button id="send-btn" class="send-btn">Send ➤</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const roomName = "{{ room.name }}";
+    const currentUser = "{{ user.username }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/chat/${roomName}/`);
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        appendMessage(data.username, data.message, data.timestamp, data.username === currentUser);
+    };
+
+    function appendMessage(username, content, time, isOwn) {
+        const messages = document.getElementById('messages');
+        const emptyChat = messages.querySelector('.empty-chat');
+        if (emptyChat) emptyChat.remove();
+
+        const div = document.createElement('div');
+        div.className = `message ${isOwn ? 'own' : ''}`;
+        div.innerHTML = `
+            <div class="msg-avatar">${username[0].toUpperCase()}</div>
+            <div class="msg-body">
+                <div class="msg-meta">
+                    <span class="msg-author">${username}</span>
+                    <span class="msg-time">${time}</span>
+                </div>
+                <div class="msg-content">${escapeHtml(content)}</div>
+            </div>`;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('message-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        const msg = input.value.trim();
+        if (msg) {
+            chatSocket.send(JSON.stringify({ message: msg }));
+            input.value = '';
+        }
+    }
+
+    // Scroll to bottom on load
+    const msgContainer = document.getElementById('messages');
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+</script>
+{% endblock %}

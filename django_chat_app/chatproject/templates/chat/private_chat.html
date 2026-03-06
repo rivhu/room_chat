@@ -1,0 +1,96 @@
+{% extends 'chat/base.html' %}
+{% block title %}DM: {{ other_user.username }} — ChatRooms{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+    <div class="chat-header">
+        <div class="chat-title">
+            <div class="dm-header-avatar">{{ other_user.username|first|upper }}</div>
+            {{ other_user.username }}
+            <span class="dm-badge">Private</span>
+        </div>
+        <div class="chat-desc">Direct message conversation</div>
+    </div>
+
+    <div class="messages-container" id="messages">
+        {% for msg in messages %}
+        <div class="message {% if msg.sender == user %}own{% endif %}">
+            <div class="msg-avatar">{{ msg.sender.username|first|upper }}</div>
+            <div class="msg-body">
+                <div class="msg-meta">
+                    <span class="msg-author">{{ msg.sender.username }}</span>
+                    <span class="msg-time">{{ msg.timestamp|time:"H:i" }}</span>
+                </div>
+                <div class="msg-content">{{ msg.content }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-chat">
+            <p>💬 No messages yet. Say hi to {{ other_user.username }}!</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="message-input-area">
+        <input type="text" id="message-input" class="message-input" placeholder="Message {{ other_user.username }}..." autocomplete="off">
+        <button id="send-btn" class="send-btn">Send ➤</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const otherUser = "{{ other_user.username }}";
+    const currentUser = "{{ user.username }}";
+    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/private/${otherUser}/`);
+
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        appendMessage(data.username, data.message, data.timestamp, data.username === currentUser);
+    };
+
+    function appendMessage(username, content, time, isOwn) {
+        const messages = document.getElementById('messages');
+        const emptyChat = messages.querySelector('.empty-chat');
+        if (emptyChat) emptyChat.remove();
+
+        const div = document.createElement('div');
+        div.className = `message ${isOwn ? 'own' : ''}`;
+        div.innerHTML = `
+            <div class="msg-avatar">${username[0].toUpperCase()}</div>
+            <div class="msg-body">
+                <div class="msg-meta">
+                    <span class="msg-author">${username}</span>
+                    <span class="msg-time">${time}</span>
+                </div>
+                <div class="msg-content">${escapeHtml(content)}</div>
+            </div>`;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('message-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        const msg = input.value.trim();
+        if (msg) {
+            chatSocket.send(JSON.stringify({ message: msg }));
+            input.value = '';
+        }
+    }
+
+    const msgContainer = document.getElementById('messages');
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+</script>
+{% endblock %}
